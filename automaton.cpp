@@ -1,11 +1,12 @@
 #include "automaton.h"
+#include <cstdio>
 #include <deque>
 
 static Automaton *instance;
 
-Automaton::Automaton(int argc, char **argv, int window_width, int window_height) :
-    window_w(window_width), window_h(window_height), chunk_half_count(5),
-    cell_per_chunk(5) {
+Automaton::Automaton(int argc, char **argv, int window_width, int window_height,
+        int size_x, int size_y) : window_w(window_width), window_h(window_height),
+        size_x(size_x), size_y(size_y) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
     glutInitWindowSize(window_w, window_h);
@@ -17,9 +18,9 @@ Automaton::Automaton(int argc, char **argv, int window_width, int window_height)
     glutIdleFunc(Automaton::displayCallback);
     glutMouseFunc(Automaton::mouseCallback);
     //glutKeyboardFunc();
-    int grid_size = cell_per_chunk * 2 * chunk_half_count;
-    grid = new int[grid_size * grid_size];
+    grid = new int[size_x * size_y];
     old_time = time(NULL);
+    printf("%d %d\n", size_x, size_y);
     init();
 }
 
@@ -43,40 +44,14 @@ void Automaton::setColor(const RGBColor &color) const {
     glColor4f(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.alpha);
 }
 
-void Automaton::reloadViewport(GLint width, GLint height) const {
-    /*
-    if (width >= height) {
-        glViewport(0, -(width - height) / 2, width, width);
-    } else {
-        glViewport(-(height - width) / 2, 0, height, height);
+void Automaton::setViewport(int left, int right, int bottom, int top) const {
+    glViewport(left, bottom, right - left, top - bottom);
+}
+
+void Automaton::setRelativeViewport(GLsizei W, GLsizei H, float R = 0) const {
+    if (R == 0) {
+        R = window_w / float(window_h);
     }
-    *//*
-    if (width >= height) {
-        glViewport( , height);
-    } else {
-        glViewport();
-    }*/
-}
-
-void Automaton::init() {
-    setBackgroundColor(burgundy);
-    setColor(white);
-    //reloadViewport(window_w, window_h);
-    
-    glMatrixMode(GL_PROJECTION);
-    gluOrtho2D(-1.0f, 1.0f, -1.0f, 1.0f);
-    glLoadIdentity();
-    setViewport(0, window_w, 0, window_h);
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-}
-
-void Automaton::reshape(GLsizei W, GLsizei H) {
-    /*reloadViewport(width, height);
-    window_w = width;
-    window_h = height;*/
-    float R = 1.0f;
     if (R > W / (float) H) {
         float height = W / R;
         setViewport(0, W, H / 2 - height / 2, H / 2 + height / 2);
@@ -84,11 +59,24 @@ void Automaton::reshape(GLsizei W, GLsizei H) {
         float width = H * R;
         setViewport(W / 2 - width / 2, W / 2 + width / 2, 0, H);
     }
-    //glutPostRedisplay();
 }
 
-void Automaton::setViewport(int left, int right, int bottom, int top) {
-    glViewport(left, bottom, right - left, top - bottom);
+void Automaton::init() {
+    setBackgroundColor(burgundy);
+    setColor(white);
+    
+    glLoadIdentity();
+    gluOrtho2D(0, size_x, size_y, 0);
+    
+    glMatrixMode(GL_MODELVIEW);
+    setRelativeViewport(window_w, window_h);
+    
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+}
+
+void Automaton::reshape(GLsizei W, GLsizei H) {
+    setRelativeViewport(W, H, size_x / float(size_y));
 }
 
 void Automaton::mouse(int button, int state, int x, int y) {
@@ -117,43 +105,42 @@ void Automaton::display() {
     glBegin(GL_POINTS);
         glVertex2f(0, 0);
     glEnd();
-    float chunk_size = 1.0f / float(chunk_half_count);
-    for (int i = -chunk_half_count; i <= chunk_half_count; i++) {
-        float chunk_i = chunk_size * i;
-        glLineWidth(1);
-        setColor(alpha_white);
-        glBegin(GL_LINES);
-            float cell_size = chunk_size / float(cell_per_chunk);
-            for (int j = 0; j <= cell_per_chunk; j++) {
-                // vertical
-                float cell_ij = chunk_i + j * cell_size;
-                glVertex2f(cell_ij, -1.0);
-                glVertex2f(cell_ij, 1.0);
-
-                //horizontal
-                glVertex2f(-1.0, cell_ij);
-                glVertex2f(1.0, cell_ij);
-            }
-        glEnd();
-
-        if (i == 0) {
+    for (int i = 0; i <= size_x; i++) {
+        if (i % cell_per_chunk == 0) {
             glLineWidth(2);
             setColor(orange);
         } else {
             glLineWidth(1);
-            setColor(white);
+            setColor(alpha_white);
         }
+        
         glBegin(GL_LINES);
-            // vertical
-            
-            glVertex2f(chunk_i, -1.0);
-            glVertex2f(chunk_i, 1.0);
-            // horizontal
-            glVertex2f(-1.0, chunk_i);
-            glVertex2f(1.0, chunk_i);
+            glVertex2f(i, -size_y);
+            glVertex2f(i, size_y);
         glEnd();
     }
-    
+    for (int i = 0; i <= size_y; i++) {
+        if (i % cell_per_chunk == 0) {
+            glLineWidth(2);
+            setColor(orange);
+        } else {
+            glLineWidth(1);
+            setColor(alpha_white);
+        }
+        
+        glBegin(GL_LINES);
+            glVertex2f(-size_x, i);
+            glVertex2f(size_x, i);
+        glEnd();
+    }
+    setColor(white);
+    glLineWidth(5);
+    glBegin(GL_LINE_LOOP);
+        glVertex2f(0, 0);
+        glVertex2f(size_x, 0);
+        glVertex2f(size_x, size_y);
+        glVertex2f(0, size_y);
+    glEnd();
     glFlush();
     glutSwapBuffers();
 }
