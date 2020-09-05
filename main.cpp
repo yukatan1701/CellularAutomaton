@@ -3,11 +3,15 @@
 #include <vector>
 #include <string>
 #include <cstdlib>
+#include <ctime>
 
 int WINDOW_H = 600;
 int WINDOW_W = 800;
 int chunk_per_width = 5;
 int cell_per_chunk = 5;
+time_t old_time, new_time;
+float center_size = 10.0f;
+float update_time = 1.0f;
 
 struct RGBColor {
     int r, g, b;
@@ -28,32 +32,43 @@ void setColor(const RGBColor &color) {
     glColor4f(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f, color.alpha);
 }
 
+void reloadViewport(GLint width, GLint height) {
+    if (width >= height) {
+        glViewport(0, -(width - height) / 2, width, width);
+    } else {
+        glViewport(-(height - width) / 2, 0, height, height);
+    }
+}
+
 void myInit() {
     
     setBackgroundColor(burgundy);
     setColor(white);
-    
-    int max = WINDOW_W > WINDOW_H ? WINDOW_W : WINDOW_H;
-    glViewport(0, 0, max, max);
+    reloadViewport(WINDOW_W, WINDOW_H);
     glMatrixMode(GL_PROJECTION);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glLoadIdentity();
+    old_time = time(NULL);
 }
 
 void myReshape(GLint width, GLint height) {
-    int max = width > height ? width : height;
-    glViewport(0, 0, max, max);
+    reloadViewport(width, height);
     WINDOW_W = width;
     WINDOW_H = height;
     glutPostRedisplay();
 }
 
 void myDisplay() {
-    glPointSize(10.0);
+    glPointSize(center_size);
     
     glClear(GL_COLOR_BUFFER_BIT);
     setColor(orange);
+    new_time = time(NULL);
+    if (difftime(new_time, old_time) >= update_time) {
+        old_time = new_time;
+        //center_size += 5;
+    }
     glBegin(GL_POINTS);
         glVertex2f(0, 0);
     glEnd();
@@ -116,9 +131,9 @@ int main(int argc, char **argv) {
     glutInitWindowSize(WINDOW_W, WINDOW_H);
     glutInitWindowPosition(100, 150);
     glutCreateWindow("Cellular automaton");
-
     glutDisplayFunc(myDisplay);
     glutReshapeFunc(myReshape);
+    glutIdleFunc(myDisplay);
     //glutMouseFunc();
     //glutKeyboardFunc();
 
