@@ -19,6 +19,9 @@ Automaton::Automaton(int argc, char **argv, int window_width, int window_height,
     glutMouseFunc(Automaton::mouseCallback);
     //glutKeyboardFunc();
     grid = new int[size_x * size_y];
+    for (int i = 0; i < size_x * size_y; i++) {
+        grid[i] = 0;
+    }
     old_time = time(NULL);
     printf("%d %d\n", size_x, size_y);
     init();
@@ -48,16 +51,22 @@ void Automaton::setViewport(int left, int right, int bottom, int top) const {
     glViewport(left, bottom, right - left, top - bottom);
 }
 
-void Automaton::setRelativeViewport(GLsizei W, GLsizei H, float R = 0) const {
-    if (R == 0) {
+void Automaton::setRelativeViewport(GLsizei W, GLsizei H, float R = -1) {
+    if (R < 0) {
         R = window_w / float(window_h);
     }
     if (R > W / (float) H) {
+        // vertical space
         float height = W / R;
         setViewport(0, W, H / 2 - height / 2, H / 2 + height / 2);
+        frame_w = W;
+        frame_h = height;
     } else {
+        // horizontal space
         float width = H * R;
         setViewport(W / 2 - width / 2, W / 2 + width / 2, 0, H);
+        frame_h = H;
+        frame_w = width;
     }
 }
 
@@ -77,18 +86,30 @@ void Automaton::init() {
 
 void Automaton::reshape(GLsizei W, GLsizei H) {
     setRelativeViewport(W, H, size_x / float(size_y));
+    window_w = W;
+    window_h = H;
 }
 
 void Automaton::mouse(int button, int state, int x, int y) {
     if (button == GLUT_LEFT_BUTTON) {
-        user_cell_queue.push_front(std::make_pair(x, y));
-        float grid_x = x / float(window_w);
-        float grid_y = y / float(window_h);
-        if (window_w >= window_h) {
-
+        //printf("X, Y: (%d, %d)\n", x, y);
+        //printf("Window size: %d %d\n", window_w, window_h);
+        int x_cell, y_cell;
+       // printf("Frame: w %d, h %d\n", frame_w, frame_h);
+        
+        if (frame_h == window_h) {
+            float left_space = (window_w - frame_w) / 2.0f;
+            x_cell = int((x - left_space) / float(frame_w) * size_x);
+            y_cell = int(y / float(frame_h) * size_y);
         } else {
-
+            float vert_space = (window_h - frame_h) / 2.0f;
+            x_cell = int(x / float(frame_w) * size_x);
+            y_cell = int((y - vert_space) / float(frame_h) * size_y);
         }
+        if (x_cell >= 0 && y_cell >= 0 && x_cell < size_x && y_cell < size_y) {
+            grid[y_cell * size_x + x_cell] = 1;
+        }
+        //printf("Position: (%d, %d)\n", x_cell, y_cell);
     }
 }
 
@@ -105,6 +126,15 @@ void Automaton::display() {
     glBegin(GL_POINTS);
         glVertex2f(0, 0);
     glEnd();
+
+    for (int i = 0; i < size_y; i++) {
+        for (int j = 0; j < size_x; j++) {
+            if (grid[i * size_x + j] != 0) {
+                glRectf(j, i, j + 1, i + 1);
+            }
+        }
+    }
+
     for (int i = 0; i <= size_x; i++) {
         if (i % cell_per_chunk == 0) {
             glLineWidth(2);

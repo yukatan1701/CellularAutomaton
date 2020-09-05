@@ -14,6 +14,7 @@ class Automaton
 {
 private:
     int window_w, window_h;
+    int frame_w, frame_h;
     int cell_per_chunk = 5;
     time_t old_time, new_time;
     float center_size = 10.0f;
@@ -22,7 +23,7 @@ private:
     int size_x, size_y;
     int *grid;
 
-    CellQueue user_cell_queue;
+    //CellQueue user_cell_queue;
     
     const RGBColor burgundy = RGBColor(102, 0, 0);
     const RGBColor white = RGBColor(255, 255, 255, 1.0);
@@ -32,7 +33,7 @@ private:
     void setBackgroundColor(const RGBColor &color) const;
     void setColor(const RGBColor &color) const;
     void setViewport(int left, int right, int bottom, int top) const;
-    void setRelativeViewport(GLsizei W, GLsizei H, float R) const;
+    void setRelativeViewport(GLsizei W, GLsizei H, float R);
     void init();
     void reshape(GLsizei W, GLsizei H);
     void display();
