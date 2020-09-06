@@ -19,6 +19,7 @@ Automaton::Automaton(int argc, char **argv, int window_width, int window_height,
     glutIdleFunc(Automaton::displayCallback);
     glutMouseFunc(Automaton::mouseCallback);
     //glutKeyboardFunc();
+    cell_count = size_x * size_y;
     grid_old = new int[size_x * size_y];
     grid_new = new int[size_x * size_y];
     for (int i = 0; i < size_x * size_y; i++) {
@@ -26,9 +27,7 @@ Automaton::Automaton(int argc, char **argv, int window_width, int window_height,
         grid_new[i] = 0;
     }
     old_time = rtclock();
-    printf("%d %d\n", size_x, size_y);
     setMode(spark);
-    loadGradient(red, yellow);
     init();
 }
 
@@ -91,7 +90,7 @@ void Automaton::setRelativeViewport(GLsizei W, GLsizei H, float R = -1) {
 }
 
 void Automaton::init() {
-    setBackgroundColor(burgundy);
+    setBackgroundColor(dark_burgundy);
     setColor(white);
     
     glLoadIdentity();
@@ -209,7 +208,8 @@ int Automaton::countNeighbour(int i, int j) {
     return count;
 }
 
-void Automaton::updateGrid() {
+int Automaton::updateGrid() {
+    int dead_count = 0;
     for (int i = 0; i < size_y; i++) {
         for (int j = 0; j < size_x; j++) {
             int cell_old = grid_old[i * size_x + j];
@@ -224,11 +224,15 @@ void Automaton::updateGrid() {
             } else {
                 cell_new = cell_old;
             }
+            if (cell_new == 0) {
+                dead_count++;
+            }
         }
     }
     int *tmp = grid_old;
     grid_old = grid_new;
     grid_new = tmp;
+    return dead_count;
 }
 
 void Automaton::display() {
@@ -237,18 +241,20 @@ void Automaton::display() {
     new_time = rtclock();
     if (isRunning) {
         double diff = new_time - old_time;
-        //printf("[TIME]: (%.3lf, %.3lf)\n", diff, update_time);
         if (diff >= update_time) {
             old_time = new_time;
-            updateGrid();
+            int dead_count = updateGrid();
             step++;
-            printf("Step: %d\n", step);
+            if (dead_count == cell_count) {
+                printf("Nobody survived. Stopped. Total steps: %d\n", step);
+                step = 0;
+                isRunning = false;
+            } else {
+                printf("Step: %d\n", step);
+            }
         }
     }
     drawGrid();
-    /*for (int i = 0; i < C + 1; i++) {
-        drawCell(0, i, gradient[i]);
-    }*/
     drawMesh(alpha_white, alpha_red);
 
     setColor(white);
@@ -287,12 +293,11 @@ void Automaton::setMode(const std::string &str) {
         return;
     }
     S = params[0], B = params[1], C = atoi(params[2].c_str()) -1;
-    printf("Mode: [%s, %s, %d]\n", S.c_str(), B.c_str(), C);
+    loadGradient(red, yellow);
 }
 
 bool Automaton::isAlive(int neighbour_count) const {
     if (neighbour_count < 0 || neighbour_count > 8) {
-        printf("Something is wrong. Neighbour count: %d\n", neighbour_count);
         return false;
     }
     char neigh_char = '0' + neighbour_count;
@@ -306,7 +311,6 @@ bool Automaton::isAlive(int neighbour_count) const {
 
 bool Automaton::isBorn(int neighbour_count) const {
     if (neighbour_count < 0 || neighbour_count > 8) {
-        printf("Something is wrong. Neighbour count: %d\n", neighbour_count);
         return false;
     }
     char neigh_char = '0' + neighbour_count;
@@ -328,5 +332,11 @@ double Automaton::rtclock() {
 }
 
 void Automaton::run() {
+    printf("\n[CONFIGURATION]\n");
+    printf("Mode: %s/%s/%d\n", S.c_str(), B.c_str(), C + 1);
+    printf("Automaton size: %dx%d\n", size_y, size_x);
+    printf("Update time: %.3f s", update_time);
+    printf("\n");
+
     glutMainLoop();
 }

@@ -18,25 +18,25 @@ private:
     int cell_per_chunk = 5;
     double old_time, new_time;
     float center_size = 10.0f;
-    float update_time = 0.1f;
+    float update_time = 0.5f;
     int step = 0;
 
     bool isRunning = false;
 
-    const std::string spark = "2/2/25";
-    const std::string bugs = "23/2/8";
     std::string S, B;
     int C;
 
     int size_x, size_y;
+    int cell_count;
     int *grid_old, *grid_new;
 
-    const RGBColor burgundy = RGBColor(102, 0, 0);
+    const RGBColor burgundy = RGBColor(70, 0, 0);
+    const RGBColor dark_burgundy = RGBColor(50, 0, 0);
     const RGBColor white = RGBColor(255, 255, 255, 1.0);
     const RGBColor alpha_white = RGBColor(255, 255, 255, 0.2);
     const RGBColor orange = RGBColor(255, 128, 0);
     const RGBColor yellow = RGBColor(255, 255, 0);
-    const RGBColor red = RGBColor(255, 0, 0);
+    const RGBColor red = RGBColor(200, 0, 0);
     const RGBColor alpha_red = RGBColor(255, 0, 0, 0.6);
     std::vector<RGBColor> gradient;
 
@@ -58,7 +58,7 @@ private:
     void drawGrid() const;
     void drawCell(int i, int j, const RGBColor &color) const;
     void drawMesh(const RGBColor &cell, const RGBColor &chunk) const;
-    void updateGrid();
+    int updateGrid();
     int countNeighbour(int i, int j);
     double rtclock();
 public:
@@ -69,6 +69,9 @@ public:
     void setMode(const std::string &str);
     void run();
     ~Automaton() { delete grid_old; delete grid_new; }
+
+    const std::string spark = "2/2/25";
+    const std::string bugs = "23/2/8";
 };
 
 #endif
