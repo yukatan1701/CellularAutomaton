@@ -91,7 +91,7 @@ void Automaton::reshape(GLsizei W, GLsizei H) {
 }
 
 void Automaton::mouse(int button, int state, int x, int y) {
-    if (button == GLUT_LEFT_BUTTON) {
+    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
         //printf("X, Y: (%d, %d)\n", x, y);
         //printf("Window size: %d %d\n", window_w, window_h);
         int x_cell, y_cell;
