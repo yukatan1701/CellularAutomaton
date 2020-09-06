@@ -275,7 +275,7 @@ void Automaton::setMode(const std::string &str) {
     std::string params[3];
     for (char letter: str) {
         if (!isdigit(letter) && letter != sep) {
-            printf("Invalid argument: %c %d.\n", letter, isdigit(letter));
+            printf("Invalid argument: %c.\n", letter);
             return;
         }
         if (letter == sep) {
@@ -292,7 +292,8 @@ void Automaton::setMode(const std::string &str) {
         printf("Invalid slash count.\n");
         return;
     }
-    S = params[0], B = params[1], C = atoi(params[2].c_str()) -1;
+    S = params[0], B = params[1], C = std::stoi(params[2]) -1;
+    C = C < 0 ? 0 : C;
     loadGradient(red, yellow);
 }
 
