@@ -4,10 +4,11 @@
 #include "rgbcolor.h"
 #include <GL/gl.h>
 #include <GL/freeglut.h>
-#include <ctime>
+#include <sys/time.h>
 #include <deque>
 #include <utility>
 #include <string>
+#include <vector>
 
 class Automaton
 {
@@ -15,13 +16,15 @@ private:
     int window_w, window_h;
     int frame_w, frame_h;
     int cell_per_chunk = 5;
-    time_t old_time, new_time;
+    double old_time, new_time;
     float center_size = 10.0f;
-    float update_time = 0.5f;
+    float update_time = 0.1f;
+    int step = 0;
 
     bool isRunning = false;
 
     const std::string spark = "2/2/25";
+    const std::string bugs = "23/2/8";
     std::string S, B;
     int C;
 
@@ -34,6 +37,8 @@ private:
     const RGBColor orange = RGBColor(255, 128, 0);
     const RGBColor yellow = RGBColor(255, 255, 0);
     const RGBColor red = RGBColor(255, 0, 0);
+    const RGBColor alpha_red = RGBColor(255, 0, 0, 0.6);
+    std::vector<RGBColor> gradient;
 
     void setBackgroundColor(const RGBColor &color) const;
     void setColor(const RGBColor &color) const;
@@ -46,6 +51,7 @@ private:
     static void mouseCallback(int button, int state, int x, int y);
     static void displayCallback();
     static void reshapeCallback(GLint width, GLint height);
+    void loadGradient(const RGBColor &low, const RGBColor &high);
 
     bool isAlive(int neighbour_count) const;
     bool isBorn(int neighbour_count) const;
@@ -54,6 +60,7 @@ private:
     void drawMesh(const RGBColor &cell, const RGBColor &chunk) const;
     void updateGrid();
     int countNeighbour(int i, int j);
+    double rtclock();
 public:
     Automaton(int argc, char **argv, int window_width, int window_height,
         int size_x, int size_y);

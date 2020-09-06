@@ -25,10 +25,26 @@ Automaton::Automaton(int argc, char **argv, int window_width, int window_height,
         grid_old[i] = 0;
         grid_new[i] = 0;
     }
-    old_time = time(NULL);
+    old_time = rtclock();
     printf("%d %d\n", size_x, size_y);
     setMode(spark);
+    loadGradient(red, yellow);
     init();
+}
+
+void Automaton::loadGradient(const RGBColor &low, const RGBColor &high) {
+    int count = C + 1;
+    double dr = (high.r - low.r) / float(count);
+    double dg = (high.g - low.g) / float(count);
+    double db = (high.b - low.b) / float(count);
+    gradient.resize(count);
+    for (int i = 0; i < count; i++) {
+        int r = low.r + i * dr;
+        int g = low.g + i * dg;
+        int b = low.b + i * db;
+        gradient[i] = RGBColor(r, g, b);
+    }
+    gradient[0] = burgundy;
 }
 
 void Automaton::mouseCallback(int button, int state, int x, int y) {
@@ -95,12 +111,8 @@ void Automaton::reshape(GLsizei W, GLsizei H) {
 }
 
 void Automaton::mouse(int button, int state, int x, int y) {
-    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-        //printf("X, Y: (%d, %d)\n", x, y);
-        //printf("Window size: %d %d\n", window_w, window_h);
+    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN && !isRunning) {
         int x_cell, y_cell;
-       // printf("Frame: w %d, h %d\n", frame_w, frame_h);
-        
         if (frame_h == window_h) {
             float left_space = (window_w - frame_w) / 2.0f;
             x_cell = int((x - left_space) / float(frame_w) * size_x);
@@ -113,9 +125,9 @@ void Automaton::mouse(int button, int state, int x, int y) {
         if (x_cell >= 0 && y_cell >= 0 && x_cell < size_x && y_cell < size_y) {
             grid_old[y_cell * size_x + x_cell] = C;
         }
-        //printf("Position: (%d, %d)\n", x_cell, y_cell);
     } else if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN) {
         isRunning = !isRunning;
+        old_time = rtclock();
     }
 }
 
@@ -129,11 +141,12 @@ void Automaton::drawGrid() const {
     for (int i = 0; i < size_y; i++) {
         for (int j = 0; j < size_x; j++) {
             value = grid_old[i * size_x + j];
-            if (value == C) {
+           /* if (value == C) {
                 drawCell(i, j, yellow);
             } else if (value > 0) {
                 drawCell(i, j, orange);
-            }
+            }*/
+            drawCell(i, j, gradient[value]);
         }
     }
 }
@@ -168,13 +181,11 @@ void Automaton::drawMesh(const RGBColor &cell, const RGBColor &chunk) const {
 
 int Automaton::countNeighbour(int i, int j) {
     int count = 0;
-    //int left, right, bottom, top, topleft, topright, bottonleft, bottomright;
+
     int i_top = (i == 0 ? (size_y - 1) : (i - 1));
     int i_bottom = (i == (size_y - 1) ? 0 : (i + 1));
     int j_left = (j == 0 ? (size_x - 1) : (j - 1));
     int j_right = (j == (size_x - 1) ? 0 : (j + 1));
-    /*int i_top = i - 1, i_bottom = i + 1;
-    int j_left = j - 1, j_right = j + 1;*/
 
     int *top_line = grid_old + i_top * size_x;
     int *middle_line = grid_old + i * size_x;
@@ -205,9 +216,9 @@ void Automaton::updateGrid() {
             int &cell_new = grid_new[i * size_x + j];
             int neighbour_count = countNeighbour(i, j);
             if (cell_old == C && !isAlive(neighbour_count)) {
-                cell_new--;
+                cell_new = cell_old - 1;
             } else if (cell_old > 0 && cell_old < C) {
-                cell_new--;
+                cell_new = cell_old - 1;
             } else if (cell_old == 0 && isBorn(neighbour_count)) {
                 cell_new = C;
             } else {
@@ -217,21 +228,28 @@ void Automaton::updateGrid() {
     }
     int *tmp = grid_old;
     grid_old = grid_new;
-    grid_new = grid_old;
+    grid_new = tmp;
 }
 
 void Automaton::display() {
     glClear(GL_COLOR_BUFFER_BIT);
 
-    new_time = time(NULL);
+    new_time = rtclock();
     if (isRunning) {
-        if (difftime(new_time, old_time) >= update_time) {
+        double diff = new_time - old_time;
+        //printf("[TIME]: (%.3lf, %.3lf)\n", diff, update_time);
+        if (diff >= update_time) {
             old_time = new_time;
             updateGrid();
+            step++;
+            printf("Step: %d\n", step);
         }
     }
     drawGrid();
-    drawMesh(alpha_white, red);
+    /*for (int i = 0; i < C + 1; i++) {
+        drawCell(0, i, gradient[i]);
+    }*/
+    drawMesh(alpha_white, alpha_red);
 
     setColor(white);
     glLineWidth(5);
@@ -268,12 +286,12 @@ void Automaton::setMode(const std::string &str) {
         printf("Invalid slash count.\n");
         return;
     }
-    S = params[0], B = params[1], C = atoi(params[2].c_str());
+    S = params[0], B = params[1], C = atoi(params[2].c_str()) -1;
     printf("Mode: [%s, %s, %d]\n", S.c_str(), B.c_str(), C);
 }
 
 bool Automaton::isAlive(int neighbour_count) const {
-    if (neighbour_count < 0 || neighbour_count > 9) {
+    if (neighbour_count < 0 || neighbour_count > 8) {
         printf("Something is wrong. Neighbour count: %d\n", neighbour_count);
         return false;
     }
@@ -287,7 +305,7 @@ bool Automaton::isAlive(int neighbour_count) const {
 }
 
 bool Automaton::isBorn(int neighbour_count) const {
-    if (neighbour_count < 0 || neighbour_count > 9) {
+    if (neighbour_count < 0 || neighbour_count > 8) {
         printf("Something is wrong. Neighbour count: %d\n", neighbour_count);
         return false;
     }
@@ -298,6 +316,15 @@ bool Automaton::isBorn(int neighbour_count) const {
         }
     }
     return false;
+}
+
+double Automaton::rtclock() {
+    struct timeval Tp;
+    int stat;
+    stat = gettimeofday(&Tp, NULL);
+    if (stat != 0)
+        printf ("Error return from gettimeofday: %d", stat);
+    return (Tp.tv_sec + Tp.tv_usec * 1.0e-6);
 }
 
 void Automaton::run() {
